@@ -113,6 +113,10 @@ function lua_render_result(result, opt)
   return img_out
 end
 
+function GetFileExtension(fn)
+	 return fn:match("^.+(%..+)$")
+end
+
 function get_input_images(opt)
   -- utility function that figures out which images we should process 
   -- and fetches all the raw image paths
@@ -122,7 +126,7 @@ function get_input_images(opt)
   elseif opt.input_dir ~= '' then
     -- iterate all files in input directory and add them to work
     for fn in paths.files(opt.input_dir) do
-      if string.sub(fn, 1, 1) ~= '.' then
+      if string.sub(fn, 1, 1) ~= '.' and GetFileExtension(fn) == '.jpg' then
         local img_in_path = paths.concat(opt.input_dir, fn)
         table.insert(image_paths, img_in_path)
       end
