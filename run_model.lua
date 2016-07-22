@@ -1,6 +1,7 @@
 require 'torch'
 require 'nn'
 require 'image'
+require 'hdf5'
 
 require 'densecap.DenseCapModel'
 local utils = require 'densecap.utils'
@@ -32,6 +33,7 @@ cmd:option('-image_size', 720)
 cmd:option('-rpn_nms_thresh', 0.7)
 cmd:option('-final_nms_thresh', 0.3)
 cmd:option('-num_proposals', 1000)
+cmd:option('-boxes_per_image', 100)
 
 -- Input settings
 cmd:option('-input_image', '',
@@ -54,6 +56,8 @@ cmd:option('-output_dir', '')
 cmd:option('-output_vis', 1,
   'if 1 then writes files needed for pretty vis into vis/ ')
 cmd:option('-output_vis_dir', 'vis/data')
+cmd:option('-output_h5',0,
+   'whether to output features in h5 file')
 
 -- Misc
 cmd:option('-gpu', 0)
@@ -75,6 +79,11 @@ function run_image(model, img_path, opt, dtype)
 
   -- Run the model forward
   local boxes, scores, captions = model:forward_test(img_caffe:type(dtype))
+  local boxes2, feats, boxes2_xywh
+  if opt.output_h5 then
+    boxes2, feats = model:extractFeatures(img_caffe:type(dtype))
+    boxes2_xywh = box_utils.xcycwh_to_xywh(boxes2)
+  end
   local boxes_xywh = box_utils.xcycwh_to_xywh(boxes)
 
   local out = {
@@ -82,6 +91,8 @@ function run_image(model, img_path, opt, dtype)
     boxes = boxes_xywh,
     scores = scores,
     captions = captions,
+    boxes2 = boxes2_xywh,
+    feats = feats
   }
   return out
 end
@@ -160,12 +171,21 @@ model:evaluate()
 -- get paths to all images we should be evaluating
 local image_paths = get_input_images(opt)
 local num_process = math.min(#image_paths, opt.max_images)
+local N = num_process
+local M = opt.boxes_per_image
+local D = 4096 -- TODO this is specific to VG
+local all_boxes = torch.FloatTensor(N, M, 4):zero()
+local all_feats = torch.FloatTensor(N, M, D):zero()
 local results_json = {}
 for k=1,num_process do
   local img_path = image_paths[k]
   print(string.format('%d/%d processing image %s', k, num_process, img_path))
   -- run the model on the image and obtain results
   local result = run_image(model, img_path, opt, dtype)  
+  
+    all_boxes[k]:copy(result.boxes2[{{1, M}}])
+    all_feats[k]:copy(result.feats[{{1, M}}])
+
   -- handle output serialization: either to directory or for pretty html vis
   if opt.output_dir ~= '' then
     local img_out = lua_render_result(result, opt)
@@ -180,6 +200,12 @@ for k=1,num_process do
     local result_json = result_to_json(result)
     result_json.img_name = paths.basename(img_path)
     table.insert(results_json, result_json)
+  end
+  if opt.output_h5 then
+    local h5_file = hdf5.open(opt.output_vis_dir .. '/feats.h5')
+    h5_file:write('/feats', all_feats)
+    h5_file:write('/boxes', all_boxes)
+    h5_file:close()
   end
 end
 
