@@ -201,12 +201,12 @@ for k=1,num_process do
     result_json.img_name = paths.basename(img_path)
     table.insert(results_json, result_json)
   end
-  if opt.output_h5 then
-    local h5_file = hdf5.open(opt.output_vis_dir .. '/feats.h5')
-    h5_file:write('/feats', all_feats)
-    h5_file:write('/boxes', all_boxes)
-    h5_file:close()
-  end
+end
+if opt.output_h5 then
+  local h5_file = hdf5.open(opt.output_vis_dir .. '/feats.h5')
+  h5_file:write('/feats', all_feats)
+  h5_file:write('/boxes', all_boxes)
+  h5_file:close()
 end
 
 if #results_json > 0 then
