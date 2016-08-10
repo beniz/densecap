@@ -80,7 +80,7 @@ function run_image(model, img_path, opt, dtype)
   -- Run the model forward
   local boxes, scores, captions = model:forward_test(img_caffe:type(dtype))
   local boxes2, feats, boxes2_xywh
-  if opt.output_h5 then
+  if opt.output_h5 == 1 then
     boxes2, feats = model:extractFeatures(img_caffe:type(dtype))
     boxes2_xywh = box_utils.xcycwh_to_xywh(boxes2)
   end
@@ -183,8 +183,10 @@ for k=1,num_process do
   -- run the model on the image and obtain results
   local result = run_image(model, img_path, opt, dtype)  
   
-  all_boxes[k]:copy(result.boxes2[{{1, M}}])
-  all_feats[k]:copy(result.feats[{{1, M}}])
+  if opt.output_h5 == 1 then
+     all_boxes[k]:copy(result.boxes2[{{1, M}}])
+     all_feats[k]:copy(result.feats[{{1, M}}])
+  end
 
   -- handle output serialization: either to directory or for pretty html vis
   if opt.output_dir ~= '' then
@@ -202,7 +204,7 @@ for k=1,num_process do
     table.insert(results_json, result_json)
   end
 end
-if opt.output_h5 then
+if opt.output_h5 == 1 then
   local h5_file = hdf5.open(opt.output_vis_dir .. '/feats.h5')
   h5_file:write('/feats', all_feats)
   h5_file:write('/boxes', all_boxes)
