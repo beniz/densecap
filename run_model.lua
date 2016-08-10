@@ -183,8 +183,8 @@ for k=1,num_process do
   -- run the model on the image and obtain results
   local result = run_image(model, img_path, opt, dtype)  
   
-    all_boxes[k]:copy(result.boxes2[{{1, M}}])
-    all_feats[k]:copy(result.feats[{{1, M}}])
+  all_boxes[k]:copy(result.boxes2[{{1, M}}])
+  all_feats[k]:copy(result.feats[{{1, M}}])
 
   -- handle output serialization: either to directory or for pretty html vis
   if opt.output_dir ~= '' then
