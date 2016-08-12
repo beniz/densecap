@@ -41,6 +41,7 @@ cmd:option('-input_image', '',
 cmd:option('-input_dir', '', 'A path to a directory with images to caption')
 cmd:option('-input_split', '',
   'A VisualGenome split identifier to process (train|val|test)')
+cmd:option('-input_images','','comma-separated list of images to process')
 
 -- Only used when input_split is given
 cmd:option('-splits_json', 'info/densecap_splits.json')
@@ -134,6 +135,9 @@ function get_input_images(opt)
   local image_paths = {}
   if opt.input_image ~= '' then
     table.insert(image_paths, opt.input_image)
+  elseif opt.input_images ~= '' then
+    limages = string.split(opt.input_images,',')
+    for x=1,#limages do table.insert(image_paths,limages[x]) end
   elseif opt.input_dir ~= '' then
     -- iterate all files in input directory and add them to work
     for fn in paths.files(opt.input_dir) do
